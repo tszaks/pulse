@@ -229,16 +229,40 @@ UMAMI_BASE_URL=http://localhost:3000 UMAMI_USERNAME=admin UMAMI_PASSWORD=your_ne
 # Agent API → http://localhost:3001
 ```
 
-### Deploy to Railway
+### Deploy anywhere (Docker)
 
-1. Fork this repo
-2. In Railway: New Project → Empty project
-3. Add a **Postgres** database service
-4. Add a new service → Deploy from GitHub repo → select `pulse` → **Root directory: `/`** → uses the Umami Docker image
-   - Set env vars: `DATABASE_URL` (from Railway Postgres), `APP_SECRET` (openssl rand -hex 32)
-5. Add a second service → Deploy from GitHub repo → select `pulse` → **Root directory: `agent-api/`**
-   - Set env vars: `UMAMI_BASE_URL`, `UMAMI_USERNAME`, `UMAMI_PASSWORD`, `PULSE_API_KEYS`
-6. Add custom domains to both services
+The entire stack — Postgres, Umami, and the Agent API — runs from a single `docker compose up`. This works on any host that supports Docker: a VPS, a cloud VM, a managed container platform, whatever you prefer.
+
+```bash
+git clone https://github.com/tszaks/pulse
+cd pulse
+cp .env.example .env
+# Fill in .env (see Environment Variables section)
+
+docker compose up -d
+```
+
+Services after startup:
+- Umami dashboard → `http://your-host:3000`
+- Pulse Agent API → `http://your-host:3001`
+
+The `agent-api` container waits for Umami to pass its health check before starting, so boot order is handled automatically.
+
+**Connecting to a managed Postgres instead of the bundled one:**
+Remove the `postgres` and `agent-api` `depends_on` entries from `docker-compose.yml`, remove the `postgres` service entirely, and set `DATABASE_URL` directly on the `umami` service pointing to your external database.
+
+**Reverse proxy (recommended for production):**
+Put Nginx or Caddy in front of both services. Point your analytics domain at port 3000 and your API domain at port 3001. Caddy handles SSL automatically via Let's Encrypt.
+
+```
+# Minimal Caddyfile example
+pulse.yourdomain.com {
+    reverse_proxy localhost:3000
+}
+api.pulse.yourdomain.com {
+    reverse_proxy localhost:3001
+}
+```
 
 ### Add tracker to a site
 

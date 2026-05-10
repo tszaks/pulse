@@ -25,6 +25,27 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  agent-api:
+    build: ./agent-api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      UMAMI_BASE_URL: http://umami:3000
+      UMAMI_USERNAME: ${UMAMI_USERNAME:-admin}
+      UMAMI_PASSWORD: ${UMAMI_PASSWORD}
+      PULSE_API_KEYS: ${PULSE_API_KEYS}
+      PORT: 3000
+    depends_on:
+      umami:
+        condition: service_healthy
 
 volumes:
   postgres-data:
