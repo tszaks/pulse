@@ -6,6 +6,8 @@ import { sitesRoutes } from './routes/sites';
 import { metricsRoutes } from './routes/metrics';
 import { insightsRoutes } from './routes/insights';
 import { anomaliesRoutes } from './routes/anomalies';
+import { activeRoutes } from './routes/active';
+import { breakdownRoutes } from './routes/breakdown';
 import { queryRoutes } from './routes/query';
 
 async function start() {
@@ -19,6 +21,8 @@ async function start() {
   await app.register(metricsRoutes);
   await app.register(insightsRoutes);
   await app.register(anomaliesRoutes);
+  await app.register(activeRoutes);
+  await app.register(breakdownRoutes);
   await app.register(queryRoutes);
 
   const port = parseInt(process.env.PORT ?? '3000', 10);

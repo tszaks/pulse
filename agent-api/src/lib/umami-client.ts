@@ -1,4 +1,4 @@
-import type { UmamiSite, UmamiStats, UmamiMetricRow, UmamiPageviews, Period } from '../types.js';
+import type { UmamiSite, UmamiStats, UmamiMetricRow, UmamiPageviews, ActiveVisitors, BreakdownType, Period } from '../types.js';
 
 const BASE_URL = process.env.UMAMI_BASE_URL!;
 const USERNAME  = process.env.UMAMI_USERNAME ?? 'admin';
@@ -75,6 +75,26 @@ export async function getTopReferrers(siteId: string, period: Period, limit = 10
     return Array.isArray(data) ? data : [];
   } catch {
     return [];
+  }
+}
+
+export async function getBreakdown(siteId: string, period: Period, type: BreakdownType, limit = 10): Promise<UmamiMetricRow[]> {
+  const { startAt, endAt } = periodToRange(period);
+  try {
+    const data = await fetchUmami(
+      `/api/websites/${siteId}/metrics?type=${type}&startAt=${startAt}&endAt=${endAt}&limit=${limit}`
+    );
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getActiveVisitors(siteId: string): Promise<ActiveVisitors> {
+  try {
+    return fetchUmami(`/api/websites/${siteId}/active`) as Promise<ActiveVisitors>;
+  } catch {
+    return { visitors: 0 };
   }
 }
 

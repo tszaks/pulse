@@ -51,10 +51,16 @@ export interface Anomaly {
   direction: 'spike' | 'drop';
 }
 
+export interface ActiveVisitors {
+  visitors: number;
+}
+
+export type BreakdownType = 'country' | 'city' | 'browser' | 'os' | 'device' | 'event';
+
 export type Period = '1d' | '7d' | '30d' | '90d';
 
 export interface ParsedQuery {
-  intent: 'overview' | 'top_pages' | 'referrers' | 'anomalies' | 'insights';
+  intent: 'overview' | 'top_pages' | 'referrers' | 'anomalies' | 'insights' | 'geo' | 'device' | 'active' | 'time' | 'events';
   period: Period;
   originalQuestion: string;
 }

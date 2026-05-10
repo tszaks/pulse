@@ -59,6 +59,49 @@ export function formatReferrers(
   return { summary, context_for_agent };
 }
 
+export function formatBreakdown(
+  domain: string,
+  rows: UmamiMetricRow[],
+  label: string,
+  period: Period
+): { summary: string; context_for_agent: string } {
+  if (rows.length === 0) {
+    const msg = `No ${label} data for ${domain} yet.`;
+    return { summary: msg, context_for_agent: msg };
+  }
+  const top3 = rows.slice(0, 3).map((r, i) => `${i + 1}. ${r.x || 'Unknown'} (${r.y.toLocaleString()})`).join(', ');
+  const summary = `Top ${label} for ${domain} ${periodLabel(period)}: ${top3}`;
+  return { summary, context_for_agent: summary + '.' };
+}
+
+export function formatActiveVisitors(
+  domain: string,
+  visitors: number
+): { summary: string; context_for_agent: string } {
+  const msg = visitors === 0
+    ? `No active visitors on ${domain} right now.`
+    : `${domain} has ${visitors} active visitor${visitors === 1 ? '' : 's'} right now.`;
+  return { summary: msg, context_for_agent: msg };
+}
+
+export function formatAvgTime(
+  domain: string,
+  totaltime: number,
+  visits: number,
+  period: Period
+): { summary: string; context_for_agent: string } {
+  if (visits === 0) {
+    const msg = `No session time data for ${domain} yet.`;
+    return { summary: msg, context_for_agent: msg };
+  }
+  const avgSec = Math.round(totaltime / visits);
+  const formatted = avgSec >= 60
+    ? `${Math.floor(avgSec / 60)}m ${avgSec % 60}s`
+    : `${avgSec}s`;
+  const msg = `Average session duration on ${domain} ${periodLabel(period)}: ${formatted} (across ${visits.toLocaleString()} visits).`;
+  return { summary: msg, context_for_agent: msg };
+}
+
 export function formatAnomalies(
   domain: string,
   anomalies: Anomaly[]

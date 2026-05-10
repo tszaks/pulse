@@ -11,6 +11,11 @@ const INTENT_PATTERNS: Array<[RegExp, ParsedQuery['intent']]> = [
   [/top\s*page|best\s*page|most\s*visit|trending\s*page|popular\s*page/i, 'top_pages'],
   [/referr|where.*from|traffic\s*source|came\s*from/i, 'referrers'],
   [/anomal|spike|drop|unusual|weird|strange/i, 'anomalies'],
+  [/countr|cit[yi]|geo|location|where.*visit|region/i, 'geo'],
+  [/device|mobile|desktop|tablet|browser|chrome|safari|firefox|os\b|operating/i, 'device'],
+  [/active|right now|live|online|currently|who.*on/i, 'active'],
+  [/how long|time on|session.*(time|duration)|avg.*time|average.*time|dwell/i, 'time'],
+  [/event|click|button|form|submit|custom/i, 'events'],
   [/insight|summar|overview|how.*did|how.*doing|performance/i, 'insights'],
 ];
 
