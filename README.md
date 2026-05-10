@@ -1,8 +1,8 @@
 # Pulse
 
-**Agent-native web analytics.** Self-hosted [Umami](https://umami.is) for collection and dashboarding, plus a Fastify API layer that returns analytics in plain English — designed for AI agents, not dashboards.
+**Web analytics for personal AI agents.** Self-hosted [Umami](https://umami.is) for collection and dashboarding, plus a Fastify API layer that returns analytics in plain English — built so agents like Hermes, OpenClaw, or any custom server-hosted agent can answer "how did my site do this week?" with real data.
 
-> "How did my site do this week?" → real answer, no dashboard required.
+> Built for people running their own agents on their own servers.
 
 **Live demo API:** `https://agent-api-production-620c.up.railway.app`
 
@@ -10,17 +10,19 @@
 
 ## Context (read this first)
 
-Most analytics platforms have APIs, but they return raw time-series data that agents have to interpret themselves. Pulse wraps Umami with an opinionated layer that shapes every response for LLM consumption: each endpoint returns a human-readable `summary`, structured `data`, and a pre-written `context_for_agent` string you can drop directly into a reply.
+If you run a personal AI agent (Hermes, OpenClaw, a custom Claude setup, etc.), you probably want it to know how your websites are performing. The problem: analytics platforms return raw time-series data that agents have to interpret themselves, and most don't have MCP servers or agent-ready APIs.
 
-This project is two things running together:
-1. **Umami** — handles the tracker script, sessions, pageview storage, GDPR compliance, and the visual dashboard. You don't need to touch it after setup.
-2. **Pulse Agent API** (`agent-api/`) — a Fastify + TypeScript service that wraps Umami's REST API and adds: agent-shaped responses, WoW comparisons, z-score anomaly detection, and a natural-language query endpoint.
+Pulse solves this with two components:
+1. **Umami** — handles the tracker script, sessions, pageview storage, GDPR compliance, and the visual dashboard. Drop in one `<script>` tag per site and forget about it.
+2. **Pulse Agent API** (`agent-api/`) — a Fastify + TypeScript service that wraps Umami's REST API. Every response includes a `context_for_agent` string your agent can use directly in a reply. No post-processing needed.
+
+The primary integration path is **MCP** — a ~150-line Python stdio server (see [Wiring to an Agent](#wiring-to-an-agent)) that plugs into any MCP-compatible agent framework. Your agent gets three tools: `pulse_query` (natural language), `pulse_metrics` (structured data), and `pulse_list_sites`.
 
 ### Why Umami instead of building a custom collector?
 Umami solves the hard parts: GDPR-compliant cookie-free tracking, session de-duplication, bot filtering, and a production-ready dashboard. The differentiation in Pulse is the **Agent API layer**, not data collection. Building a custom collector would take months and produce a worse result.
 
 ### Why Fastify instead of Express?
-Fastify is ~2x faster than Express for JSON-heavy APIs and has first-class TypeScript support and schema validation built in. For an API that agents will hammer with requests, it matters.
+Fastify is ~2x faster than Express for JSON-heavy APIs and has first-class TypeScript support. For an API that agents call frequently, it matters.
 
 ---
 
@@ -286,18 +288,119 @@ Get the `data-website-id` from Umami → Websites → Edit.
 
 ---
 
-## Wiring to an AI Agent
+## Wiring to an Agent
 
-Any agent with HTTP tool access works. Add this to its system prompt or tool definition:
+Pulse is built for personal agents running on their own servers — the kind that load MCP tools from a config file and can call HTTP endpoints. Here's how to connect it.
+
+### MCP (recommended)
+
+If your agent supports MCP (Hermes, OpenClaw, Claude Code, etc.), add `pulse/index.py` as an MCP server. It exposes three tools: `pulse_query`, `pulse_list_sites`, and `pulse_metrics`.
+
+Create the file on your agent's server:
+
+```python
+#!/usr/bin/env python3
+import sys, json, urllib.request
+
+PULSE_BASE = "https://your-api-domain.com"
+PULSE_KEY  = "your_api_key"
+HEADERS = {"Authorization": f"Bearer {PULSE_KEY}", "Content-Type": "application/json"}
+
+TOOLS = [
+    {
+        "name": "pulse_query",
+        "description": "Query web analytics in plain English. Ask things like 'how did marpenutrition.com do this week?' or 'top pages on szakacsmedia.com this month?'. Returns a reply-ready summary.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "domain": {"type": "string", "description": "Domain to query, e.g. yoursite.com"},
+                "question": {"type": "string", "description": "Natural language analytics question"}
+            },
+            "required": ["domain", "question"]
+        }
+    },
+    {
+        "name": "pulse_list_sites",
+        "description": "List all websites being tracked.",
+        "inputSchema": {"type": "object", "properties": {}, "required": []}
+    },
+    {
+        "name": "pulse_metrics",
+        "description": "Get structured metrics for a site.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "domain": {"type": "string"},
+                "period": {"type": "string", "enum": ["1d","7d","30d","90d"], "default": "7d"}
+            },
+            "required": ["domain"]
+        }
+    }
+]
+
+def call(method, path, body=None):
+    data = json.dumps(body).encode() if body else None
+    req = urllib.request.Request(PULSE_BASE + path, data=data, headers=HEADERS, method=method)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+def handle(name, args):
+    if name == "pulse_list_sites":
+        sites = call("GET", "/v1/sites")["sites"]
+        return {"content": [{"type": "text", "text": "\n".join(f"- {s['domain']}" for s in sites)}]}
+    if name == "pulse_query":
+        r = call("POST", "/v1/query", {"domain": args["domain"], "question": args["question"]})
+        return {"content": [{"type": "text", "text": r.get("context_for_agent") or r.get("summary")}]}
+    if name == "pulse_metrics":
+        sites = call("GET", "/v1/sites")["sites"]
+        site = next((s for s in sites if s["domain"] == args["domain"]), None)
+        if not site: return {"content": [{"type": "text", "text": f"Site {args['domain']} not found."}]}
+        r = call("GET", f"/v1/sites/{site['id']}/metrics?period={args.get('period','7d')}")
+        return {"content": [{"type": "text", "text": r.get("context_for_agent") or r.get("summary")}]}
+
+for line in sys.stdin:
+    if not line.strip(): continue
+    try:
+        req = json.loads(line)
+        method, rid = req.get("method"), req.get("id")
+        if method == "initialize":
+            resp = {"jsonrpc":"2.0","id":rid,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"pulse","version":"1.0.0"}}}
+        elif method == "tools/list":
+            resp = {"jsonrpc":"2.0","id":rid,"result":{"tools":TOOLS}}
+        elif method == "tools/call":
+            resp = {"jsonrpc":"2.0","id":rid,"result":handle(req["params"]["name"],req["params"].get("arguments",{}))}
+        elif method and method.startswith("notifications/"): continue
+        else:
+            resp = {"jsonrpc":"2.0","id":rid,"error":{"code":-32601,"message":"Method not found"}}
+        print(json.dumps(resp), flush=True)
+    except Exception as e:
+        print(json.dumps({"jsonrpc":"2.0","id":None,"error":{"code":-32700,"message":str(e)}}), flush=True)
+```
+
+Register it in your agent's config (example for Hermes `config.yaml`):
+```yaml
+mcp_servers:
+  pulse:
+    command: python3
+    args:
+      - /path/to/pulse/index.py
+```
+
+Restart your agent. It will now have `pulse_query`, `pulse_list_sites`, and `pulse_metrics` available as tools.
+
+### Direct HTTP
+
+Any agent that can make HTTP requests works too. The `POST /v1/query` endpoint is the simplest entry point:
 
 ```
-You have access to a pulse_query tool that queries web analytics.
-Call it with { domain: "yoursite.com", question: "natural language question" }.
-The response includes a context_for_agent field — use that text directly in your reply.
-Available domains: [list your domains here]
+POST /v1/query
+Authorization: Bearer YOUR_KEY
+{ "domain": "yoursite.com", "question": "how did we do this week?" }
+
+→ { "context_for_agent": "yoursite.com had 1,243 pageviews this week — +34%..." }
 ```
 
-For **MCP-compatible agents**, the Pulse API can be wrapped as an MCP server using the same stdio pattern as the namecheap MCP. A `pulse_query`, `pulse_list_sites`, and `pulse_metrics` tool covers all use cases.
+Add the `context_for_agent` field to your agent's system context or reply directly with its value.
 
 ---
 
