@@ -7,7 +7,13 @@ function pct(current: number, prev: number): string {
 }
 
 function periodLabel(period: Period): string {
-  return { '1d': 'today', '7d': 'this week', '30d': 'this month', '90d': 'last 90 days' }[period];
+  return {
+    '1d': 'today',
+    '7d': 'this week',
+    '14d': 'the last 14 days',
+    '30d': 'this month',
+    '90d': 'last 90 days',
+  }[period];
 }
 
 export function formatOverview(

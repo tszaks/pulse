@@ -3,9 +3,11 @@ import { requireApiKey } from '../lib/auth.js';
 import { getStats, getTopPages, getTopReferrers } from '../lib/umami-client.js';
 import { formatOverview, formatTopPages, formatReferrers } from '../lib/llm-formatter.js';
 import { getSites } from '../lib/umami-client.js';
+import { PERIODS } from '../types.js';
 import type { Period } from '../types.js';
 
-const VALID_PERIODS = new Set<Period>(['1d', '7d', '30d', '90d']);
+const VALID_PERIODS = new Set<Period>(PERIODS);
+const PERIOD_ERROR = `period must be ${PERIODS.join(', ')}`;
 
 export async function metricsRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string }; Querystring: { period?: string } }>(
@@ -14,7 +16,7 @@ export async function metricsRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const period = (req.query.period ?? '7d') as Period;
       if (!VALID_PERIODS.has(period)) {
-        return reply.code(400).send({ error: 'period must be 1d, 7d, 30d, or 90d' });
+        return reply.code(400).send({ error: PERIOD_ERROR });
       }
 
       const [stats, topPages, topReferrers, sites] = await Promise.all([

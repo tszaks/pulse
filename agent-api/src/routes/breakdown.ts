@@ -2,10 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { requireApiKey } from '../lib/auth.js';
 import { getBreakdown, getStats, getSites } from '../lib/umami-client.js';
 import { formatBreakdown, formatAvgTime } from '../lib/llm-formatter.js';
+import { PERIODS } from '../types.js';
 import type { BreakdownType, Period } from '../types.js';
 
 const VALID_TYPES = new Set<BreakdownType>(['country', 'city', 'browser', 'os', 'device', 'event']);
-const VALID_PERIODS = new Set<Period>(['1d', '7d', '30d', '90d']);
+const VALID_PERIODS = new Set<Period>(PERIODS);
+const PERIOD_ERROR = `period must be ${PERIODS.join(', ')}`;
 
 const TYPE_LABELS: Record<BreakdownType, string> = {
   country: 'countries',
@@ -28,7 +30,7 @@ export async function breakdownRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: `type must be one of: ${[...VALID_TYPES].join(', ')}` });
       }
       if (!VALID_PERIODS.has(period)) {
-        return reply.code(400).send({ error: 'period must be 1d, 7d, 30d, or 90d' });
+        return reply.code(400).send({ error: PERIOD_ERROR });
       }
 
       const [rows, sites] = await Promise.all([
@@ -55,7 +57,7 @@ export async function breakdownRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const period = (req.query.period ?? '7d') as Period;
       if (!VALID_PERIODS.has(period)) {
-        return reply.code(400).send({ error: 'period must be 1d, 7d, 30d, or 90d' });
+        return reply.code(400).send({ error: PERIOD_ERROR });
       }
 
       const [stats, sites] = await Promise.all([

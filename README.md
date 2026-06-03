@@ -117,7 +117,7 @@ Returns all sites registered in your Umami instance.
 ---
 
 ### GET /v1/sites/:id/metrics
-Query params: `period` = `1d` | `7d` | `30d` | `90d` (default `7d`)
+Query params: `period` = `1d` | `7d` | `14d` | `30d` | `90d` (default `7d`)
 
 **Response shape:**
 ```json
@@ -181,6 +181,7 @@ Alternatively use `site_id` instead of `domain`.
 |---------|-----------|
 | "today", "last 24h" | period=1d |
 | "this week", "7 days", "last week" | period=7d |
+| "two weeks", "14 days", "last 2 weeks" | period=14d |
 | "this month", "30 days" | period=30d |
 | "top pages", "trending", "most visited" | intent=top_pages |
 | "referrer", "where from", "traffic source" | intent=referrers |
@@ -331,7 +332,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "domain": {"type": "string"},
-                "period": {"type": "string", "enum": ["1d","7d","30d","90d"], "default": "7d"}
+                "period": {"type": "string", "enum": ["1d","7d","14d","30d","90d"], "default": "7d"}
             },
             "required": ["domain"]
         }

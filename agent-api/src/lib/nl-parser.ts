@@ -3,6 +3,7 @@ import type { ParsedQuery, Period } from '../types.js';
 const PERIOD_PATTERNS: Array<[RegExp, Period]> = [
   [/today|24\s*h|last\s*day/i, '1d'],
   [/this\s*week|7\s*days?|past\s*week|last\s*week/i, '7d'],
+  [/2\s*weeks?|two\s*weeks?|14\s*days?|fortnight/i, '14d'],
   [/this\s*month|30\s*days?|past\s*month|last\s*month/i, '30d'],
   [/3\s*months?|90\s*days?|quarter/i, '90d'],
 ];

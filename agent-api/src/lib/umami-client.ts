@@ -1,3 +1,4 @@
+import { PERIOD_DAYS } from '../types.js';
 import type { UmamiSite, UmamiStats, UmamiMetricRow, UmamiPageviews, ActiveVisitors, BreakdownType, Period } from '../types.js';
 
 const BASE_URL = process.env.UMAMI_BASE_URL!;
@@ -37,8 +38,7 @@ async function getToken(): Promise<string> {
 
 export function periodToRange(period: Period): { startAt: number; endAt: number } {
   const endAt = Date.now();
-  const days: Record<Period, number> = { '1d': 1, '7d': 7, '30d': 30, '90d': 90 };
-  const startAt = endAt - days[period] * 24 * 60 * 60 * 1000;
+  const startAt = endAt - PERIOD_DAYS[period] * 24 * 60 * 60 * 1000;
   return { startAt, endAt };
 }
 

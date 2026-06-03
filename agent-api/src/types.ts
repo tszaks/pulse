@@ -57,7 +57,17 @@ export interface ActiveVisitors {
 
 export type BreakdownType = 'country' | 'city' | 'browser' | 'os' | 'device' | 'event';
 
-export type Period = '1d' | '7d' | '30d' | '90d';
+export const PERIODS = ['1d', '7d', '14d', '30d', '90d'] as const;
+
+export type Period = typeof PERIODS[number];
+
+export const PERIOD_DAYS: Record<Period, number> = {
+  '1d': 1,
+  '7d': 7,
+  '14d': 14,
+  '30d': 30,
+  '90d': 90,
+};
 
 export interface ParsedQuery {
   intent: 'overview' | 'top_pages' | 'referrers' | 'anomalies' | 'insights' | 'geo' | 'device' | 'active' | 'time' | 'events';
