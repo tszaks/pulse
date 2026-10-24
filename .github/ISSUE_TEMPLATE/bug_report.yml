@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in Pulse does not work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Do not paste API keys, Umami passwords or your real site data. Replace them with placeholders.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The request you sent (with the key removed) and the response you got.
+      placeholder: |
+        1. POST /v1/query with {"domain": "example.com", "question": "..."}
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Pulse version or commit
+      placeholder: "v0.1.1 or a commit hash"
+    validations:
+      required: true
+  - type: input
+    id: umami
+    attributes:
+      label: Umami version
+      description: Shown in the Umami dashboard footer.
+      placeholder: "3.0.0"
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How do you run Pulse?
+      options:
+        - "docker compose"
+        - "Node directly (npm run dev or npm start)"
+        - "Other"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from the agent-api log. Remove secrets first.
+      render: shell
